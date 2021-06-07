@@ -82,7 +82,6 @@ class _AddGameState extends State<AddGame> {
               gameUrlField(),
               playersDetail(),
               categoryDetails(),
-
               _image == null
                   ? new Container(
                 margin:

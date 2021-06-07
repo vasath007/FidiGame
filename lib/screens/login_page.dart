@@ -19,10 +19,10 @@ class _LoginPageState extends State<LoginPage> {
   final _scaffoldKey = GlobalKey<ScaffoldState>();
 
   void emptytoast() {
-    if (_emailController.text.toString() == "" && _emailController.text.toString() != '@') {
+    if (_emailController.text.toString() == "" || _emailController.text.toString() != '@') {
       _scaffoldKey.currentState.showSnackBar(SnackBar(
           content: Text("Enter a valid Email")));
-    } else if (_passwordController.text.toString() == "" && _passwordController.text.length < 3) {
+    } else if (_passwordController.text.toString() == "" || _passwordController.text.length < 3) {
       _scaffoldKey.currentState.showSnackBar(SnackBar(
           content: Text("Enter a valid Password")));
     }
@@ -185,37 +185,56 @@ class _LoginPageState extends State<LoginPage> {
               side: BorderSide(color: Color(0xffFCBC3C))),
           color: Color(0xffFCBC3C),
           onPressed: () async {
-            emptytoast();
-            try {
-              final loginUser = await _auth.signInWithEmailAndPassword(email: email, password: password);
-              if(loginUser.user != null)
-                {
-                  SharedPreferences prefs = await SharedPreferences.getInstance();
-                  prefs.setString( global.id, loginUser?.user.uid);
-                  Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                          fullscreenDialog: true,
-                          builder: (Context) => Home()));
-                }
-              else
-                {
-                  final newUser =
-                  await _auth.createUserWithEmailAndPassword(
-                      email: email, password: password);
-                  SharedPreferences prefs = await SharedPreferences.getInstance();
-                  prefs.setString( global.id, newUser?.user.uid);
-                  if (newUser != null) {
+            if(email != null && email.contains('@') && password != null && password !="")
+              {
+                try {
+                  final loginUser = await _auth.signInWithEmailAndPassword(email: email, password: password);
+                  if(loginUser.user != null)
+                  {
+                    SharedPreferences prefs = await SharedPreferences.getInstance();
+                    prefs.setString( global.id, loginUser?.user.uid);
                     Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(
                             fullscreenDialog: true,
                             builder: (Context) => Home()));
                   }
-                }
+                  else
+                  {
+                    _scaffoldKey.currentState.showSnackBar(SnackBar(
+                        content: Text("Something Went Wrong.")));
+                  }
 
-            } catch (e) {
-              print(e.toString());
+                } on FirebaseAuthException catch (e) {
+                  if (e.code == 'user-not-found') {
+                    try{
+                      final newUser =
+                      await _auth.createUserWithEmailAndPassword(
+                          email: email, password: password);
+                      SharedPreferences prefs = await SharedPreferences.getInstance();
+                      prefs.setString( global.id, newUser?.user.uid);
+                      if (newUser != null) {
+                        Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                                fullscreenDialog: true,
+                                builder: (Context) => Home()));
+                      }
+                    }on FirebaseAuthException catch(err)
+                    {
+                      _scaffoldKey.currentState.showSnackBar(SnackBar(
+                          content: Text(err.toString())));
+                    }
+                  } else if (e.code == 'wrong-password') {
+                    _scaffoldKey.currentState.showSnackBar(SnackBar(
+                        content: Text("Wrong password provided for that user.")));
+                  } else {
+                    _scaffoldKey.currentState.showSnackBar(SnackBar(
+                        content: Text("Something Went Wrong.")));
+                  }
+                }
+              }else{
+              emptytoast();
             }
 
           },
